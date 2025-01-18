@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -78,14 +78,23 @@ func (m model) View() string {
 		s.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
 	}
 	s.WriteString("\n\n" + m.filepicker.View() + "\n")
+
+	if m.selectedFile != "" {
+		out, err := exec.Command("cat", m.selectedFile).Output()
+		if err == nil {
+			s.WriteString("\n" + string(out))
+		}
+	}
+
 	return s.String()
 }
 
 func main() {
 	fp := filepicker.New()
-	fp.AllowedTypes = []string{".mod", ".sum", ".go", ".txt", ".md"}
-	fp.CurrentDirectory, _ = os.UserHomeDir()
-
+	fp.AllowedTypes = []string{".hurl"}
+	fp.CurrentDirectory = "/home/yym/SSD-1TB/coding/repos/hurl"
+	fp.AutoHeight = false
+	fp.Height = 10
 	m := model{
 		filepicker: fp,
 	}
