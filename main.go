@@ -16,6 +16,7 @@ import (
 type model struct {
 	filepicker   filepicker.Model
 	selectedFile string
+	hurlOutput   string
 	quitting     bool
 	err          error
 }
@@ -51,6 +52,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
 		// Get the path of the selected file.
 		m.selectedFile = path
+		if m.selectedFile == path {
+			output, err := exec.Command("hurl", path, "--variables-file", "/home/yym/SSD-1TB/coding/repos/hurl/hurl.env").CombinedOutput()
+			if err == nil {
+				m.hurlOutput = string(output)
+			} else {
+				m.hurlOutput = err.Error() + "\n" + string(output)
+			}
+		}
 	}
 
 	// Did the user select a disabled file?
@@ -84,8 +93,12 @@ func (m model) View() string {
 	if m.selectedFile != "" {
 		out, err := exec.Command("cat", m.selectedFile).Output()
 		if err == nil {
-			s.WriteString("  cat output:\n" + style.Render(string(out)))
+			s.WriteString("  cat output:\n" + style.Render(string(out)) + "\n")
 		}
+	}
+
+	if m.hurlOutput != "" {
+		s.WriteString("  hurl output:\n" + style.Render(string(m.hurlOutput)) + "\n")
 	}
 
 	return s.String()
