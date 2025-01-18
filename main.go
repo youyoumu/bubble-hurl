@@ -2,15 +2,41 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+const url = "https://charm.sh/"
+
+type errMsg struct {
+	err error
+}
+
+func (e errMsg) Error() string {
+	return e.err.Error()
+}
+
+type statusMsg int
 
 type model struct {
 	choices  []string
 	cursor   int
 	selected map[int]struct{}
+	status   int
+	err      error
+}
+
+func checkServer() tea.Msg {
+	c := &http.Client{Timeout: 10 * time.Second}
+	res, err := c.Get(url)
+	if err != nil {
+		return errMsg{err}
+	}
+
+	return statusMsg(res.StatusCode)
 }
 
 func initialModel() model {
@@ -21,11 +47,18 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return checkServer
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case statusMsg:
+		m.status = int(msg)
+
+	case errMsg:
+		m.err = msg
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -67,6 +100,15 @@ func (m model) View() string {
 		}
 
 		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	}
+
+	if m.err != nil {
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	}
+
+	s += fmt.Sprintf("Checking %s ... ", url)
+	if m.status > 0 {
+		s += fmt.Sprintf("%d %s!", m.status, http.StatusText(m.status))
 	}
 
 	s += "\nPress q to quit\n"
