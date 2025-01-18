@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/lipgloss"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -68,6 +69,7 @@ func (m model) View() string {
 	if m.quitting {
 		return ""
 	}
+	style := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
 	var s strings.Builder
 	s.WriteString("\n  ")
 	if m.err != nil {
@@ -77,12 +79,12 @@ func (m model) View() string {
 	} else {
 		s.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
 	}
-	s.WriteString("\n\n" + m.filepicker.View() + "\n")
+	s.WriteString("\n" + style.Render(m.filepicker.View()) + "\n")
 
 	if m.selectedFile != "" {
 		out, err := exec.Command("cat", m.selectedFile).Output()
 		if err == nil {
-			s.WriteString("\n" + string(out))
+			s.WriteString("  cat output:\n" + style.Render(string(out)))
 		}
 	}
 
