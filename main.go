@@ -12,6 +12,7 @@ import (
 	"github.com/kortschak/utter"
 
 	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,6 +25,8 @@ type model struct {
 	hurlOutput      string
 	quitting        bool
 	filePickerError error
+	hurlViewport    viewport.Model
+	ready           bool
 }
 
 type clearErrorMsg struct{}
@@ -43,6 +46,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		utter.Fdump(m.dump, msg)
 	}
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		if !m.ready {
+			// Since this program is using the full size of the viewport we
+			// need to wait until we've received the window dimensions before
+			// we can initialize the viewport. The initial dimensions come in
+			// quickly, though asynchronously, which is why we wait for them
+			// here.
+			m.hurlViewport = viewport.New(msg.Width, 10)
+			// m.hurlViewport.YPosition = headerHeight
+			m.ready = true
+		} else {
+			m.hurlViewport.Width = msg.Width
+			m.hurlViewport.Height = 10
+		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -53,7 +71,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filePickerError = nil
 	}
 
-	var cmd tea.Cmd
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
+
 	m.filepicker, cmd = m.filepicker.Update(msg)
 
 	// Did the user select a file?
@@ -84,7 +106,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 	}
 
-	return m, cmd
+	m.hurlViewport.SetContent(m.hurlView())
+
+	// m.hurlViewport, cmd = m.hurlViewport.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
@@ -96,7 +123,7 @@ func (m model) View() string {
 	s.WriteString("\n")
 	s.WriteString(m.catView())
 	s.WriteString("\n")
-	s.WriteString(m.hurlView())
+	s.WriteString(m.hurlViewport.View())
 
 	return s.String()
 }
@@ -135,7 +162,7 @@ func (m model) hurlView() string {
 	s.WriteString("\n")
 	s.WriteString("\n")
 	s.WriteString(string(m.hurlOutput))
-	return borderStyle.Render(s.String())
+	return s.String()
 }
 
 func main() {
