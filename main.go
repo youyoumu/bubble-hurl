@@ -53,11 +53,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// we can initialize the viewport. The initial dimensions come in
 			// quickly, though asynchronously, which is why we wait for them
 			// here.
-			m.hurlViewport = viewport.New(msg.Width, 10)
+			m.hurlViewport = viewport.New(msg.Width-2, 10)
 			// m.hurlViewport.YPosition = headerHeight
 			m.ready = true
 		} else {
-			m.hurlViewport.Width = msg.Width
+			m.hurlViewport.Width = msg.Width - 2
 			m.hurlViewport.Height = 10
 		}
 
@@ -106,8 +106,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 	}
 
-	m.hurlViewport.SetContent(m.hurlView())
-
 	// m.hurlViewport, cmd = m.hurlViewport.Update(msg)
 	cmds = append(cmds, cmd)
 
@@ -123,7 +121,7 @@ func (m model) View() string {
 	s.WriteString("\n")
 	s.WriteString(m.catView())
 	s.WriteString("\n")
-	s.WriteString(m.hurlViewport.View())
+	s.WriteString(m.hurlView())
 
 	return s.String()
 }
@@ -162,7 +160,8 @@ func (m model) hurlView() string {
 	s.WriteString("\n")
 	s.WriteString("\n")
 	s.WriteString(string(m.hurlOutput))
-	return s.String()
+	m.hurlViewport.SetContent(s.String())
+	return borderStyle.Render(m.hurlViewport.View())
 }
 
 func main() {
