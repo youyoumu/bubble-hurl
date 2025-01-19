@@ -91,9 +91,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.activeWindow {
 	case 1:
 		m.filepicker, cmd = m.filepicker.Update(msg)
-		// Did the user select a file?
+		cmds = append(cmds, cmd)
+
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
-			// Get the path of the selected file.
 			m.selectedFile = path
 			if m.selectedFile == path {
 				hurlOutput, err := exec.Command("hurl", path, "--variables-file", "/home/yym/SSD-1TB/coding/repos/hurl/hurl.env").CombinedOutput()
@@ -110,15 +110,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
+		if didSelectDisabled, path := m.filepicker.DidSelectDisabledFile(msg); didSelectDisabled {
 			m.filepickerError = errors.New(path + " is not valid.")
 			m.selectedFile = ""
-			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
+			cmds = append(cmds, clearErrorAfter(2*time.Second))
 		}
 	case 2:
 		m.catViewport, cmd = m.catViewport.Update(msg)
+		cmds = append(cmds, cmd)
 	case 3:
 		m.hurlViewport, cmd = m.hurlViewport.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	m.filepickerViewport.Style = borderStyle(m.activeWindow == 1)
@@ -127,8 +129,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.catViewport.SetContent(m.catView())
 	m.hurlViewport.Style = borderStyle(m.activeWindow == 3)
 	m.hurlViewport.SetContent(m.hurlView())
-
-	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
