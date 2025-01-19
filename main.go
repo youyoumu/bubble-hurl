@@ -83,16 +83,12 @@ func (m model) View() string {
 	if m.quitting {
 		return ""
 	}
-	style := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
 	var s strings.Builder
 	s.WriteString(m.filePickerView())
 	s.WriteString("\n")
 	s.WriteString(m.catView())
 	s.WriteString("\n")
-
-	if m.hurlOutput != "" {
-		s.WriteString("  hurl output:\n" + style.Render(string(m.hurlOutput)) + "\n")
-	}
+	s.WriteString(m.hurlView())
 
 	return s.String()
 }
@@ -122,6 +118,15 @@ func (m model) catView() string {
 		out, _ := exec.Command("cat", m.selectedFile).CombinedOutput()
 		s.WriteString(string(out))
 	}
+	return borderStyle.Render(s.String())
+}
+
+func (m model) hurlView() string {
+	var s strings.Builder
+	s.WriteString("hurl Output:")
+	s.WriteString("\n")
+	s.WriteString("\n")
+	s.WriteString(string(m.hurlOutput))
 	return borderStyle.Render(s.String())
 }
 
