@@ -27,6 +27,7 @@ type model struct {
 	filePickerError error
 	hurlViewport    viewport.Model
 	ready           bool
+	activeWindow    int
 }
 
 type clearErrorMsg struct{}
@@ -66,6 +67,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			m.quitting = true
 			return m, tea.Quit
+		case "1":
+			m.activeWindow = 1
+		case "2":
+			m.activeWindow = 2
+		case "3":
+			m.activeWindow = 3
 		}
 	case clearErrorMsg:
 		m.filePickerError = nil
@@ -126,7 +133,14 @@ func (m model) View() string {
 	return s.String()
 }
 
-var borderStyle = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
+func borderStyle(active bool) lipgloss.Style {
+	style := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
+	if !active {
+		return style
+	} else {
+		return style.BorderForeground(lipgloss.Color("011"))
+	}
+}
 
 func (m model) filePickerView() string {
 	var s strings.Builder
@@ -139,7 +153,7 @@ func (m model) filePickerView() string {
 	}
 	s.WriteString("\n")
 	s.WriteString(m.filepicker.View())
-	return borderStyle.Render(s.String())
+	return borderStyle(m.activeWindow == 1).Render(s.String())
 }
 
 func (m model) catView() string {
@@ -151,7 +165,7 @@ func (m model) catView() string {
 		out, _ := exec.Command("cat", m.selectedFile).CombinedOutput()
 		s.WriteString(string(out))
 	}
-	return borderStyle.Render(s.String())
+	return borderStyle(m.activeWindow == 2).Render(s.String())
 }
 
 func (m model) hurlView() string {
@@ -161,7 +175,7 @@ func (m model) hurlView() string {
 	s.WriteString("\n")
 	s.WriteString(string(m.hurlOutput))
 	m.hurlViewport.SetContent(s.String())
-	return borderStyle.Render(m.hurlViewport.View())
+	return borderStyle(m.activeWindow == 3).Render(m.hurlViewport.View())
 }
 
 func main() {
@@ -181,8 +195,9 @@ func main() {
 	fp.Height = 10
 
 	m := model{
-		dump:       dump,
-		filepicker: fp,
+		activeWindow: 1,
+		dump:         dump,
+		filepicker:   fp,
 	}
 	if _, err := tea.NewProgram(&m).Run(); err != nil {
 		fmt.Println("could not start program:", err)
