@@ -14,11 +14,11 @@ import (
 )
 
 type model struct {
-	filepicker   filepicker.Model
-	selectedFile string
-	hurlOutput   string
-	quitting     bool
-	err          error
+	filepicker      filepicker.Model
+	selectedFile    string
+	hurlOutput      string
+	quitting        bool
+	filePickerError error
 }
 
 type clearErrorMsg struct{}
@@ -42,7 +42,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case clearErrorMsg:
-		m.err = nil
+		m.filePickerError = nil
 	}
 
 	var cmd tea.Cmd
@@ -71,7 +71,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// This is only necessary to display an error to the user.
 	if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
 		// Let's clear the selectedFile and display an error.
-		m.err = errors.New(path + " is not valid.")
+		m.filePickerError = errors.New(path + " is not valid.")
 		m.selectedFile = ""
 		return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 	}
@@ -85,15 +85,8 @@ func (m model) View() string {
 	}
 	style := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
 	var s strings.Builder
-	s.WriteString("\n  ")
-	if m.err != nil {
-		s.WriteString(m.filepicker.Styles.DisabledFile.Render(m.err.Error()))
-	} else if m.selectedFile == "" {
-		s.WriteString("Pick a file:")
-	} else {
-		s.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
-	}
-	s.WriteString("\n" + style.Render(m.filepicker.View()) + "\n")
+	s.WriteString(m.filePickerView())
+	s.WriteString("\n")
 
 	if m.selectedFile != "" {
 		out, err := exec.Command("cat", m.selectedFile).Output()
@@ -107,6 +100,22 @@ func (m model) View() string {
 	}
 
 	return s.String()
+}
+
+var borderStyle = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder())
+
+func (m model) filePickerView() string {
+	var s strings.Builder
+	if m.filePickerError != nil {
+		s.WriteString(m.filepicker.Styles.DisabledFile.Render(m.filePickerError.Error()))
+	} else if m.selectedFile == "" {
+		s.WriteString("Pick a file:")
+	} else {
+		s.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
+	}
+	s.WriteString("\n")
+	s.WriteString(m.filepicker.View())
+	return borderStyle.Render(s.String())
 }
 
 func main() {
