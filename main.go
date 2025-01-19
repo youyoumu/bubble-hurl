@@ -22,6 +22,7 @@ type model struct {
 	dump               io.Writer
 	filepicker         filepicker.Model
 	selectedFile       string
+	fileUnderCursor    string
 	hurlOutput         string
 	quitting           bool
 	filepickerError    error
@@ -92,6 +93,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case 1:
 		m.filepicker, cmd = m.filepicker.Update(msg)
 		cmds = append(cmds, cmd)
+
+		fileUnderCursor, err := m.filepicker.GetFileUnderCursor()
+		if err == nil {
+			m.fileUnderCursor = fileUnderCursor
+		}
 
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
 			m.selectedFile = path
@@ -176,8 +182,8 @@ func (m model) catView() string {
 	s.WriteString("cat Output:")
 	s.WriteString("\n")
 	s.WriteString("\n")
-	if m.selectedFile != "" {
-		out, _ := exec.Command("cat", m.selectedFile).CombinedOutput()
+	if m.fileUnderCursor != "" {
+		out, _ := exec.Command("cat", m.fileUnderCursor).CombinedOutput()
 		s.WriteString(string(out))
 	}
 	return s.String()
