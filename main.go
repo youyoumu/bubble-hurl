@@ -53,11 +53,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Get the path of the selected file.
 		m.selectedFile = path
 		if m.selectedFile == path {
-			output, err := exec.Command("hurl", path, "--variables-file", "/home/yym/SSD-1TB/coding/repos/hurl/hurl.env").CombinedOutput()
+			hurlOutput, err := exec.Command("hurl", path, "--variables-file", "/home/yym/SSD-1TB/coding/repos/hurl/hurl.env").CombinedOutput()
 			if err == nil {
-				m.hurlOutput = string(output)
+				jqOutput, jqErr := exec.Command("jq", "--color-output", "--null-input", "--jsonargs", string(hurlOutput)).CombinedOutput()
+				if jqErr == nil {
+					m.hurlOutput = string(jqOutput)
+				} else {
+					m.hurlOutput = jqErr.Error()
+				}
 			} else {
-				m.hurlOutput = err.Error() + "\n" + string(output)
+				m.hurlOutput = err.Error() + "\n" + string(hurlOutput)
 			}
 		}
 	}
