@@ -87,13 +87,8 @@ func (m model) View() string {
 	var s strings.Builder
 	s.WriteString(m.filePickerView())
 	s.WriteString("\n")
-
-	if m.selectedFile != "" {
-		out, err := exec.Command("cat", m.selectedFile).Output()
-		if err == nil {
-			s.WriteString("  cat output:\n" + style.Render(string(out)) + "\n")
-		}
-	}
+	s.WriteString(m.catView())
+	s.WriteString("\n")
 
 	if m.hurlOutput != "" {
 		s.WriteString("  hurl output:\n" + style.Render(string(m.hurlOutput)) + "\n")
@@ -115,6 +110,18 @@ func (m model) filePickerView() string {
 	}
 	s.WriteString("\n")
 	s.WriteString(m.filepicker.View())
+	return borderStyle.Render(s.String())
+}
+
+func (m model) catView() string {
+	var s strings.Builder
+	s.WriteString("cat Output:")
+	s.WriteString("\n")
+	s.WriteString("\n")
+	if m.selectedFile != "" {
+		out, _ := exec.Command("cat", m.selectedFile).CombinedOutput()
+		s.WriteString(string(out))
+	}
 	return borderStyle.Render(s.String())
 }
 
