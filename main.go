@@ -3,9 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kortschak/utter"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/lipgloss"
@@ -14,6 +18,7 @@ import (
 )
 
 type model struct {
+	dump            io.Writer
 	filepicker      filepicker.Model
 	selectedFile    string
 	hurlOutput      string
@@ -34,6 +39,9 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.dump != nil {
+		utter.Fdump(m.dump, msg)
+	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -131,15 +139,27 @@ func (m model) hurlView() string {
 }
 
 func main() {
+	var dump *os.File
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		var err error
+		dump, err = os.OpenFile("messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+		if err != nil {
+			os.Exit(1)
+		}
+	}
+
 	fp := filepicker.New()
 	fp.AllowedTypes = []string{".hurl"}
 	fp.CurrentDirectory = "/home/yym/SSD-1TB/coding/repos/hurl"
 	fp.AutoHeight = false
 	fp.Height = 10
+
 	m := model{
+		dump:       dump,
 		filepicker: fp,
 	}
-	tm, _ := tea.NewProgram(&m).Run()
-	mm := tm.(model)
-	fmt.Println("\n  You selected: " + m.filepicker.Styles.Selected.Render(mm.selectedFile) + "\n")
+	if _, err := tea.NewProgram(&m).Run(); err != nil {
+		fmt.Println("could not start program:", err)
+		os.Exit(1)
+	}
 }
