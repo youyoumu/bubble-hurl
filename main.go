@@ -19,16 +19,17 @@ import (
 )
 
 type model struct {
-	dump            io.Writer
-	filepicker      filepicker.Model
-	selectedFile    string
-	hurlOutput      string
-	quitting        bool
-	filePickerError error
-	catViewport     viewport.Model
-	hurlViewport    viewport.Model
-	ready           bool
-	activeWindow    int
+	dump               io.Writer
+	filepicker         filepicker.Model
+	selectedFile       string
+	hurlOutput         string
+	quitting           bool
+	filepickerError    error
+	filepickerViewport viewport.Model
+	catViewport        viewport.Model
+	hurlViewport       viewport.Model
+	ready              bool
+	activeWindow       int
 }
 
 type clearErrorMsg struct{}
@@ -50,11 +51,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		if !m.ready {
+
+			m.filepickerViewport = viewport.New(msg.Width-2, 11)
 			m.catViewport = viewport.New(msg.Width-2, 10)
 			m.hurlViewport = viewport.New(msg.Width-2, 10)
 			m.ready = true
 		} else {
 
+			m.filepickerViewport.Width = msg.Width - 2
+			m.filepickerViewport.Height = 10
 			m.catViewport.Width = msg.Width - 2
 			m.catViewport.Height = 10
 			m.hurlViewport.Width = msg.Width - 2
@@ -74,7 +79,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeWindow = 3
 		}
 	case clearErrorMsg:
-		m.filePickerError = nil
+		m.filepickerError = nil
 	}
 
 	var (
@@ -105,7 +110,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
-			m.filePickerError = errors.New(path + " is not valid.")
+			m.filepickerError = errors.New(path + " is not valid.")
 			m.selectedFile = ""
 			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 		}
@@ -115,6 +120,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.hurlViewport, cmd = m.hurlViewport.Update(msg)
 	}
 
+	m.filepickerViewport.Style = borderStyle(m.activeWindow == 1)
+	m.filepickerViewport.SetContent(m.filePickerView())
 	m.catViewport.Style = borderStyle(m.activeWindow == 2)
 	m.catViewport.SetContent(m.catView())
 	m.hurlViewport.Style = borderStyle(m.activeWindow == 3)
@@ -130,7 +137,7 @@ func (m model) View() string {
 		return ""
 	}
 	var s strings.Builder
-	s.WriteString(m.filePickerView())
+	s.WriteString(m.filepickerViewport.View())
 	s.WriteString("\n")
 	s.WriteString(m.catViewport.View())
 	s.WriteString("\n")
@@ -150,8 +157,8 @@ func borderStyle(active bool) lipgloss.Style {
 
 func (m model) filePickerView() string {
 	var s strings.Builder
-	if m.filePickerError != nil {
-		s.WriteString(m.filepicker.Styles.DisabledFile.Render(m.filePickerError.Error()))
+	if m.filepickerError != nil {
+		s.WriteString(m.filepicker.Styles.DisabledFile.Render(m.filepickerError.Error()))
 	} else if m.selectedFile == "" {
 		s.WriteString("Pick a file:")
 	} else {
@@ -159,7 +166,7 @@ func (m model) filePickerView() string {
 	}
 	s.WriteString("\n")
 	s.WriteString(m.filepicker.View())
-	return borderStyle(m.activeWindow == 1).Render(s.String())
+	return s.String()
 }
 
 func (m model) catView() string {
