@@ -52,18 +52,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		if !m.ready {
 
-			m.filepickerViewport = viewport.New(msg.Width-2, 11)
-			m.catViewport = viewport.New(msg.Width-2, 10)
-			m.hurlViewport = viewport.New(msg.Width-2, 10)
+			m.filepicker.Height = 10
+			m.filepickerViewport = viewport.New((msg.Width/2)-2, (msg.Height/2)-2)
+			m.catViewport = viewport.New((msg.Width/2)-2, (msg.Height/2)-2)
+			m.hurlViewport = viewport.New((msg.Width/2)-2, (msg.Height)-2)
 			m.ready = true
 		} else {
 
-			m.filepickerViewport.Width = msg.Width - 2
-			m.filepickerViewport.Height = 10
-			m.catViewport.Width = msg.Width - 2
-			m.catViewport.Height = 10
-			m.hurlViewport.Width = msg.Width - 2
-			m.hurlViewport.Height = 10
+			m.filepickerViewport.Width = (msg.Width / 2) - 2
+			m.filepickerViewport.Height = (msg.Height / 2) - 2
+			m.catViewport.Width = (msg.Width / 2) - 2
+			m.catViewport.Height = (msg.Height / 2) - 2
+			m.hurlViewport.Width = (msg.Width / 2) - 2
+			m.hurlViewport.Height = (msg.Height) - 2
 		}
 
 	case tea.KeyMsg:
@@ -136,14 +137,15 @@ func (m model) View() string {
 	if m.quitting {
 		return ""
 	}
-	var s strings.Builder
-	s.WriteString(m.filepickerViewport.View())
-	s.WriteString("\n")
-	s.WriteString(m.catViewport.View())
-	s.WriteString("\n")
-	s.WriteString(m.hurlViewport.View())
+	var left strings.Builder
+	left.WriteString(m.filepickerViewport.View())
+	left.WriteString("\n")
+	left.WriteString(m.catViewport.View())
 
-	return s.String()
+	var right strings.Builder
+	right.WriteString(m.hurlViewport.View())
+
+	return lipgloss.JoinHorizontal(lipgloss.Center, left.String(), right.String())
 }
 
 func borderStyle(active bool) lipgloss.Style {
@@ -204,7 +206,6 @@ func main() {
 	fp.AllowedTypes = []string{".hurl"}
 	fp.CurrentDirectory = "/home/yym/SSD-1TB/coding/repos/hurl"
 	fp.AutoHeight = false
-	fp.Height = 10
 
 	m := model{
 		activeWindow: 1,
