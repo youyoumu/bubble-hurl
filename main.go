@@ -11,9 +11,9 @@ import (
 
 	"github.com/kortschak/utter"
 
-	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+	filepicker "github.com/youyoumu/bubble-hurl/filepicker2"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
