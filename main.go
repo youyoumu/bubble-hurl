@@ -25,6 +25,7 @@ type model struct {
 	hurlOutput      string
 	quitting        bool
 	filePickerError error
+	catViewport     viewport.Model
 	hurlViewport    viewport.Model
 	ready           bool
 	activeWindow    int
@@ -48,14 +49,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		filePickerHeight := lipgloss.Height(m.filePickerView())
-		catHeight := lipgloss.Height(m.catView())
-
 		if !m.ready {
+			m.catViewport = viewport.New(msg.Width-2, 10)
 			m.hurlViewport = viewport.New(msg.Width-2, 10)
-			m.hurlViewport.YPosition = filePickerHeight + catHeight
 			m.ready = true
 		} else {
+
+			m.catViewport.Width = msg.Width - 2
+			m.catViewport.Height = 10
 			m.hurlViewport.Width = msg.Width - 2
 			m.hurlViewport.Height = 10
 		}
@@ -80,9 +81,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
-
-	m.hurlViewport.Style = borderStyle(m.activeWindow == 3)
-	m.hurlViewport.SetContent(m.hurlView())
 
 	switch m.activeWindow {
 	case 1:
@@ -111,10 +109,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedFile = ""
 			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 		}
-
+	case 2:
+		m.catViewport, cmd = m.catViewport.Update(msg)
 	case 3:
 		m.hurlViewport, cmd = m.hurlViewport.Update(msg)
 	}
+
+	m.catViewport.Style = borderStyle(m.activeWindow == 2)
+	m.catViewport.SetContent(m.catView())
+	m.hurlViewport.Style = borderStyle(m.activeWindow == 3)
+	m.hurlViewport.SetContent(m.hurlView())
 
 	cmds = append(cmds, cmd)
 
@@ -128,7 +132,7 @@ func (m model) View() string {
 	var s strings.Builder
 	s.WriteString(m.filePickerView())
 	s.WriteString("\n")
-	s.WriteString(m.catView())
+	s.WriteString(m.catViewport.View())
 	s.WriteString("\n")
 	s.WriteString(m.hurlViewport.View())
 
@@ -167,7 +171,7 @@ func (m model) catView() string {
 		out, _ := exec.Command("cat", m.selectedFile).CombinedOutput()
 		s.WriteString(string(out))
 	}
-	return borderStyle(m.activeWindow == 2).Render(s.String())
+	return s.String()
 }
 
 func (m model) hurlView() string {
